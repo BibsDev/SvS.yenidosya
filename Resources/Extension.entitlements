@@ -9,5 +9,8 @@
     <array><string>/</string></array>
     <key>com.apple.security.temporary-exception.files.home-relative-path.read-write</key>
     <array><string>/</string></array>
+    <!-- "Gizli Dosyaları Göster/Gizle" menü başlığı için Finder ayarını okumak -->
+    <key>com.apple.security.temporary-exception.shared-preference.read-only</key>
+    <array><string>com.apple.finder</string></array>
 </dict>
 </plist>

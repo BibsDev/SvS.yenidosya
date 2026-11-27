@@ -2,7 +2,8 @@ import Cocoa
 import FinderSync
 import UniformTypeIdentifiers
 
-/// Finder sağ tık menüsüne "Yeni Dosya ▸ …" ve "Terminal ▸ Terminalde Aç / Yolu Kopyala / Yeni Terminal" alt menülerini ekler.
+/// Finder sağ tık menüsüne "Yeni Dosya ▸ …", "Terminal ▸ Terminalde Aç / Yolu Kopyala / Yeni Terminal"
+/// alt menülerini, "Adrese Git…" ve "Gizli Dosyaları Göster/Gizle" öğelerini ekler.
 final class FinderSync: FIFinderSync {
 
     struct DocType {
@@ -70,10 +71,22 @@ final class FinderSync: FIFinderSync {
         termRoot.image = Self.symbol("apple.terminal")
         termRoot.submenu = termSub
 
+        let shown = Self.hiddenFilesShown()
+        let hidden = NSMenuItem(title: shown ? "Gizli Dosyaları Gizle" : "Gizli Dosyaları Göster",
+                                action: #selector(toggleHiddenFiles(_:)), keyEquivalent: "")
+        hidden.target = self
+        hidden.image = Self.symbol(shown ? "eye.slash" : "eye")
+
         let menu = NSMenu(title: "")
         menu.addItem(root)
         menu.addItem(.separator())
+        let goTo = NSMenuItem(title: "Adrese Git…", action: #selector(goToAddress(_:)), keyEquivalent: "")
+        goTo.target = self
+        goTo.image = Self.symbol("arrow.right.circle")
+
         menu.addItem(termRoot)
+        menu.addItem(goTo)
+        menu.addItem(hidden)
         return menu
     }
 
@@ -138,6 +151,45 @@ final class FinderSync: FIFinderSync {
         cfg.activates = true
         NSWorkspace.shared.open([folder], withApplicationAt: terminal, configuration: cfg) { _, error in
             if let error { NSLog("SvS.yenidosya: Terminal açılamadı: \(error)") }
+        }
+    }
+
+    // MARK: Adrese git
+
+    /// Uzantı penceresi klavyeyi alamadığı için yol sorma işini paketteki yardımcı uygulama
+    /// (Contents/Helpers/AdreseGit.app) yapar; kutu boş açılır.
+    @objc func goToAddress(_ sender: NSMenuItem) {
+        let helper = Bundle.main.bundleURL
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Helpers/AdreseGit.app")
+        let cfg = NSWorkspace.OpenConfiguration()
+        cfg.activates = true
+        NSWorkspace.shared.openApplication(at: helper, configuration: cfg) { _, error in
+            if let error { NSLog("SvS.yenidosya: Adrese Git açılamadı: \(error)") }
+        }
+    }
+
+    // MARK: Gizli dosyalar
+
+    /// Finder'ın "AppleShowAllFiles" ayarı (uzantı bunu yalnızca okuyabilir).
+    static func hiddenFilesShown() -> Bool {
+        let v = CFPreferencesCopyAppValue("AppleShowAllFiles" as CFString, "com.apple.finder" as CFString)
+        if let b = v as? Bool { return b }
+        if let s = v as? String { return ["1", "yes", "true"].contains(s.lowercased()) }
+        return false
+    }
+
+    /// Ayarı değiştirip Finder'ı yeniden başlatmak sandbox dışında olmalı: uygulama paketindeki
+    /// küçük yardımcıyı (Contents/Helpers/GizliDosyalar.app) açarız.
+    @objc func toggleHiddenFiles(_ sender: NSMenuItem) {
+        let helper = Bundle.main.bundleURL            // …/SvS.yenidosya.app/Contents/PlugIns/FinderExtension.appex
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Helpers/GizliDosyalar.app")
+        let cfg = NSWorkspace.OpenConfiguration()
+        cfg.activates = false
+        cfg.createsNewApplicationInstance = true
+        NSWorkspace.shared.openApplication(at: helper, configuration: cfg) { _, error in
+            if let error { NSLog("SvS.yenidosya: gizli dosya yardımcısı açılamadı: \(error)") }
         }
     }
 

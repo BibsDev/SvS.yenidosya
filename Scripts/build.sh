@@ -23,7 +23,21 @@ cp Resources/App-Info.plist "$APP/Contents/Info.plist"
 [ -f Resources/AppIcon.icns ] && cp Resources/AppIcon.icns "$APP/Contents/Resources/"
 swiftc -O -swift-version 5 -parse-as-library App/App.swift -framework FinderSync -o "$APP/Contents/MacOS/SvS.yenidosya"
 
-# İmza (ad-hoc): önce uzantı, sonra uygulama
+# Gizli dosyalar yardımcısı (sandbox dışı; Finder ayarını değiştirip Finder'ı yeniden başlatır)
+HLP="$APP/Contents/Helpers/GizliDosyalar.app"
+mkdir -p "$HLP/Contents/MacOS"
+cp Resources/Helper-Info.plist "$HLP/Contents/Info.plist"
+swiftc -O -swift-version 5 Helper/HiddenToggle.swift -o "$HLP/Contents/MacOS/GizliDosyalar"
+
+# "Adrese Git…" yardımcısı (uzantı penceresi klavye alamadığı için yol sorma işini bu yapar)
+GTO="$APP/Contents/Helpers/AdreseGit.app"
+mkdir -p "$GTO/Contents/MacOS"
+cp Resources/AdreseGit-Info.plist "$GTO/Contents/Info.plist"
+swiftc -O -swift-version 5 Helper/AdreseGit.swift -o "$GTO/Contents/MacOS/AdreseGit"
+
+# İmza (ad-hoc): önce yardımcılar ve uzantı, sonra uygulama
+codesign --force -s - "$HLP"
+codesign --force -s - "$GTO"
 codesign --force -s - --entitlements Resources/Extension.entitlements "$EXT"
 codesign --force -s - "$APP"
 echo "Derleme tamam: $APP"
